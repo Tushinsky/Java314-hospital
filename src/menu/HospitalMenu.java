@@ -20,7 +20,6 @@ import java.util.logging.Logger;
 public class HospitalMenu {
     private final Scanner scanner;// чтение данных с клавиатуры
     private int menuItem = 1;
-    private String sqlString;
 
     public HospitalMenu(Scanner scanner) {
         this.scanner = scanner;
@@ -60,6 +59,7 @@ public class HospitalMenu {
     }
     
     private void doChoice() {
+//        scanner.nextInt();
         System.out.println("Введите: ");
         int choice = scanner.nextInt();
         scanner.nextLine();
@@ -217,32 +217,40 @@ public class HospitalMenu {
         Object idPatient = getIdPatient();
 //        System.out.println("id= " + idPatient);
         if(idPatient != null) {
-            // если пациент зарегистрирован, выводим врачей
+            int patID = Integer.parseInt(idPatient.toString());
+            // если пациент зарегистрирован, выводим его данные
+            getPatient(patID);
+            // выводим врачей
             showDoctors();
             
             try {
-                System.out.println("Выберите врача для записи на приём: ");
-                int id = scanner.nextInt();
-                if(isExistDictor(id) == false) {
-                    System.out.println("Такого врача не существует. Сделайте правильный выбор!");
+                while(true) {
+                    System.out.println("Выберите врача для записи на приём (для отмены введите 0): ");
+                    int id = scanner.nextInt();
+                    if(id == 0) break;
                     
-                } else{
-                    scanner.nextLine();
-                    System.out.println("Выберите дату (yyyy-mm-dd): ");
-                    String date = scanner.nextLine();
-                    System.out.println("Выберите время (hh:mm): ");
-                    String time = scanner.nextLine();
-                    String fieldName = "idDoctor, idPatient, admission_date";
-                    String fieldValue = "?,?,?";
-                    Object[] param = {id, Integer.parseInt(idPatient.toString()), (date + " " + time)};
-                    Runquery rq = new Runquery("admission");
-                    if(rq.addEntity(fieldName, fieldValue, new Class[]{Integer.class, 
-                        Integer.class, String.class}, param)) {
-                        System.out.println("Запись на приём успешна!");
-                        // выводим информацию по истории
-                        showAdmission();
-                        showMainMenuItem();
+                    if(isExistDictor(id) == false) {
+                        System.out.println("Такого врача не существует. Сделайте правильный выбор!");
+
+                    } else{
+                        scanner.nextLine();
+                        System.out.println("Выберите дату (yyyy-mm-dd): ");
+                        String date = scanner.nextLine();
+                        System.out.println("Выберите время (hh:mm): ");
+                        String time = scanner.nextLine();
+                        String fieldName = "idDoctor, idPatient, admission_date";
+                        String fieldValue = "?,?,?";
+                        Object[] param = {id, patID, (date + " " + time)};
+    //                        Runquery rq = new Runquery("admission");
+    //                        if(rq.addEntity(fieldName, fieldValue, new Class[]{Integer.class, 
+    //                            Integer.class, String.class}, param)) {
+    //                            System.out.println("Запись на приём успешна!");
+    //                            // выводим информацию по истории
+    //                            showAdmission();
+    //                            showMainMenuItem();
+    //                        }
                     }
+
                 }
             } catch (InputMismatchException ex) {
                 // вывод ошибок
@@ -298,5 +306,12 @@ public class HospitalMenu {
             return false;
         }
         return Integer.parseInt(idDoctor.toString())== id;
+    }
+    
+    private void getPatient(int id) {
+        String query = "SELECT NAME FROM PATIENTS WHERE ID=" + id + ";";// строка-запрос на выборку
+        Runquery rq = new Runquery();
+        Object patientName = rq.getFieldValue(query, 1);
+        System.out.println("Запись на приём: пациент " + patientName.toString());
     }
 }

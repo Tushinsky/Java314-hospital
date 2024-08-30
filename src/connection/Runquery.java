@@ -155,12 +155,12 @@ public class Runquery {
     
     /**
      * 
-     * @param fieldName ������ � �������������� ����� �������, � �������
-     * ����� ����������� ������, ���������� �������
-     * @param param ������ ������������� ���������� �������� ��� ���������� � �������
-     * @param fieldValue ������, ���������� ����� ����������� ������ ��������, ��
-     * ���������� ������ ��������������� ������� ������� ����������� ����������
-     * @return � ������ ������ ���������� true ����� false
+     * @param fieldName строка с наименовавниями полей таблицы базы данных, в
+     * которые будут вставляться данные
+     * @param param строковый массив значений для вставки в таблицу
+     * @param fieldValue строка, содержащая символы подстановки (?), вместо
+     * которых будут вставляться значения
+     * @return в случае успеха возвращает true, иначе false
      */
     public boolean addEntity(String fieldName, String fieldValue, String[] param){
         boolean retval;
@@ -169,20 +169,28 @@ public class Runquery {
         System.out.print(sqlQuery);
         int i = 0;
         try {
-            // ������ �������������� ���������� ��� ���������� �������� ���������� ������
+            // создаём подготовленную инструкцию для выполнения запроса
+            JDBCConnection.getConn().setAutoCommit(false);
             PreparedStatement prst = JDBCConnection.getPrepstat(sqlQuery);
             if(prst != null){
-                // ���� �������������� ���������� �������,
-                // ����� � ���������
+                // задаём параметры инструкции
                 for(int j = 0; j < param.length; j++)
                     prst.setString(j + 1, param[j]);
-                i = prst.executeUpdate();// �������� ��������� ����������
-                prst.clearParameters();// ������� ���������
-                prst.close();// ��������� ����������
+                i = prst.executeUpdate();// выполняем запрос
+                prst.clearParameters();// очищаем параметры инструкции
+                prst.close();// закрываем инструкцию
+                JDBCConnection.getConn().commit();
+                JDBCConnection.getConn().setAutoCommit(true);
             }
         } catch (SQLException ex) {
-            showErrorMessage(ex);
-            return false;
+            try {
+                JDBCConnection.getConn().rollback();
+                JDBCConnection.getConn().setAutoCommit(true);
+                showErrorMessage(ex);
+                return false;
+            } catch (SQLException ex1) {
+                Logger.getLogger(Runquery.class.getName()).log(Level.SEVERE, null, ex1);
+            }
         }
         retval = i > 0;
         return retval;
@@ -320,16 +328,15 @@ public class Runquery {
     
     /**
      * 
-     * @param sqlQuery ������ - ������ �� ������� ������
-     * @param fieldNumber ����� ���� � �������, �������� �������� ������������
-     * @return �������� ���������� ���� �������
+     * @param sqlQuery строка - запрос на получение данных
+     * @param fieldNumber номер поля в запросе для получения данных
+     * @return значение Object искомого поля
      */
     public Object getFieldValue(String sqlQuery, int fieldNumber){
         Object retval = null;
         try {
             ResultSet rs = JDBCConnection.getStat().executeQuery(sqlQuery);
-            while(rs.next()){
-//                System.out.println("value=" + rs.getString(fieldNumber));
+            if(rs.next()){
                 retval = rs.getString(fieldNumber);
             }
         } catch (SQLException ex) {

@@ -224,32 +224,36 @@ public class HospitalMenu {
             showDoctors();
             
             try {
+                String choice;
                 while(true) {
                     System.out.println("Выберите врача для записи на приём (для отмены введите 0): ");
-                    int id = scanner.nextInt();
-                    if(id == 0) break;
-                    
+                    choice = scanner.nextLine();
+                    if(choice.equals("0")) break;
+                    int id = Integer.parseInt(choice);
                     if(isExistDictor(id) == false) {
                         System.out.println("Такого врача не существует. Сделайте правильный выбор!");
-
-                    } else{
-                        scanner.nextLine();
-                        System.out.println("Выберите дату (yyyy-mm-dd): ");
-                        String date = scanner.nextLine();
-                        System.out.println("Выберите время (hh:mm): ");
-                        String time = scanner.nextLine();
-                        String fieldName = "idDoctor, idPatient, admission_date";
-                        String fieldValue = "?,?,?";
-                        Object[] param = {id, patID, (date + " " + time)};
-    //                        Runquery rq = new Runquery("admission");
-    //                        if(rq.addEntity(fieldName, fieldValue, new Class[]{Integer.class, 
-    //                            Integer.class, String.class}, param)) {
-    //                            System.out.println("Запись на приём успешна!");
-    //                            // выводим информацию по истории
-    //                            showAdmission();
-    //                            showMainMenuItem();
-    //                        }
+                        break;
                     }
+                    System.out.println("Выберите дату (yyyy-mm-dd): ");
+                    choice = scanner.nextLine();
+                    if(choice.equals("0")) break;
+                    String date = choice;
+                    System.out.println("Выберите время (hh:mm): ");
+                    choice = scanner.nextLine();
+                    if(choice.equals("0")) break;
+                    String time = choice;
+                    String fieldName = "idDoctor, idPatient, admission_date";
+                    String fieldValue = "?,?,?";
+                    Object[] param = {id, patID, (date + " " + time)};
+//                        Runquery rq = new Runquery("admission");
+//                        if(rq.addEntity(fieldName, fieldValue, new Class[]{Integer.class, 
+//                            Integer.class, String.class}, param)) {
+//                            System.out.println("Запись на приём успешна!");
+//                            // выводим информацию по истории
+//                            showAdmission();
+//                            showMainMenuItem();
+//                        }
+
 
                 }
             } catch (InputMismatchException ex) {

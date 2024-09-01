@@ -134,6 +134,7 @@ public class Runquery {
                 "VALUES(" + fieldValue + ");";
         int i = 0;
         try {
+            JDBCConnection.getConn().setAutoCommit(false);
             // ������ �������������� ���������� ��� ���������� �������� ���������� ������
             PreparedStatement prst = JDBCConnection.getPrepstat(sqlQuery);
             if(prst != null){
@@ -144,8 +145,16 @@ public class Runquery {
                 i = prst.executeUpdate();// �������� ��������� ����������
                 prst.clearParameters();// ������� ���������
                 prst.close();// ��������� ����������
+                JDBCConnection.getConn().commit();
+                JDBCConnection.getConn().setAutoCommit(true);
             }
         } catch (SQLException ex) {
+            try {
+                JDBCConnection.getConn().rollback();
+                JDBCConnection.getConn().setAutoCommit(false);
+            } catch (SQLException ex1) {
+                Logger.getLogger(Runquery.class.getName()).log(Level.SEVERE, null, ex1);
+            }
             showErrorMessage(ex);
             return false;
         }
@@ -166,9 +175,10 @@ public class Runquery {
         boolean retval;
         String sqlQuery = "INSERT INTO " + tableName + "(" + fieldName + ") " +
                 "VALUES(" + fieldValue + ");";
-        System.out.print(sqlQuery);
+//        System.out.print(sqlQuery);
         int i = 0;
         try {
+            JDBCConnection.getConn().setAutoCommit(false);
             // ������ �������������� ���������� ��� ���������� �������� ���������� ������
             PreparedStatement prst = JDBCConnection.getPrepstat(sqlQuery);
             if(prst != null){
@@ -179,8 +189,16 @@ public class Runquery {
                 i = prst.executeUpdate();// �������� ��������� ����������
                 prst.clearParameters();// ������� ���������
                 prst.close();// ��������� ����������
+                JDBCConnection.getConn().commit();
+                JDBCConnection.getConn().setAutoCommit(true);
             }
         } catch (SQLException ex) {
+            try {
+                JDBCConnection.getConn().rollback();
+                JDBCConnection.getConn().setAutoCommit(false);
+            } catch (SQLException ex1) {
+                Logger.getLogger(Runquery.class.getName()).log(Level.SEVERE, null, ex1);
+            }
             showErrorMessage(ex);
             return false;
         }
@@ -205,6 +223,7 @@ public class Runquery {
 //        System.out.print(sqlQuery);
         int i = 0;
         try {
+            JDBCConnection.getConn().setAutoCommit(false);
             // ������ �������������� ���������� ��� ���������� �������� ���������� ������
             PreparedStatement prst = JDBCConnection.getPrepstat(sqlQuery);
             if(prst != null){
@@ -243,8 +262,16 @@ public class Runquery {
                 i = prst.executeUpdate();// �������� ��������� ����������
                 prst.clearParameters();// ������� ���������
                 prst.close();// ��������� ����������
+                JDBCConnection.getConn().commit();
+                JDBCConnection.getConn().setAutoCommit(true);
             }
         } catch (SQLException ex) {
+            try {
+                JDBCConnection.getConn().rollback();
+                JDBCConnection.getConn().setAutoCommit(false);
+            } catch (SQLException ex1) {
+                Logger.getLogger(Runquery.class.getName()).log(Level.SEVERE, null, ex1);
+            }
             showErrorMessage(ex);
             return false;
         }
@@ -271,6 +298,7 @@ public class Runquery {
         String sqlQuery = "{call " + procedureName + " " + charAt + "}";
 //        System.out.println("sqlquery - " + sqlQuery);
         CallableStatement myStmt = JDBCConnection.getCallableStat(sqlQuery);// �������� ���������
+        JDBCConnection.getConn().setAutoCommit(false);
         if(myStmt != null) {
             // ���� ����� ������ ���������, ������������ ���������
 //            System.out.println("inLenth = " + inParameters.length);
@@ -288,13 +316,25 @@ public class Runquery {
             }
             // ��������� ���������
             int executeUpdate = myStmt.executeUpdate();
-            // ��������� ������ �������� ����������
-            for(int i = 1; i <= outParameters.length; i++) {
-                outParameters[i - 1] = myStmt.getInt(i);
+            if(executeUpdate > 0) {
+                // ��������� ������ �������� ����������
+                for(int i = 1; i <= outParameters.length; i++) {
+                    outParameters[i - 1] = myStmt.getInt(i);
+                }
             }
+            JDBCConnection.getConn().commit();
+            JDBCConnection.getConn().setAutoCommit(true);
             
             return outParameters;
-        } else return null;
+        } else {
+            try {
+                JDBCConnection.getConn().rollback();
+                JDBCConnection.getConn().setAutoCommit(false);
+            } catch (SQLException ex1) {
+                Logger.getLogger(Runquery.class.getName()).log(Level.SEVERE, null, ex1);
+            }
+            return null;
+        }
         
     }
     
@@ -309,8 +349,17 @@ public class Runquery {
                 " A WHERE A.ID=" + identifier + ";";
         int i;
         try {
+            JDBCConnection.getConn().setAutoCommit(false);
             i = JDBCConnection.getStat().executeUpdate(sqlQuery);// �������� ������ �� ��������
+            JDBCConnection.getConn().commit();
+            JDBCConnection.getConn().setAutoCommit(true);
         } catch (SQLException ex) {
+            try {
+                JDBCConnection.getConn().rollback();
+                JDBCConnection.getConn().setAutoCommit(false);
+            } catch (SQLException ex1) {
+                Logger.getLogger(Runquery.class.getName()).log(Level.SEVERE, null, ex1);
+            }
             showErrorMessage(ex);
             return false;
         }

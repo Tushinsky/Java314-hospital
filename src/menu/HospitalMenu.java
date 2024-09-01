@@ -6,6 +6,7 @@
 package menu;
 
 import connection.Runquery;
+import java.util.Arrays;
 import java.util.InputMismatchException;
 import java.util.List;
 import java.util.Objects;
@@ -20,7 +21,7 @@ import java.util.logging.Logger;
 public class HospitalMenu {
     private final Scanner scanner;// чтение данных с клавиатуры
     private int menuItem = 1;
-    private String sqlString;
+    private static List<Object[]> entities;
 
     public HospitalMenu(Scanner scanner) {
         this.scanner = scanner;
@@ -96,7 +97,7 @@ public class HospitalMenu {
      */
     private static void outData(String sql) {
         Runquery rq = new Runquery();// объект для получения данных
-        List<Object[]> entities = rq.getQueryEntities(sql);
+        entities = rq.getQueryEntities(sql);
         System.out.println("Вывод данных:");
         String[] columnname = rq.getColumnName();// получаем наименования столбцов запроса
         int[] maxWidth = new int[columnname.length];// массив размеров столбцов
@@ -217,31 +218,48 @@ public class HospitalMenu {
         Object idPatient = getIdPatient();
 //        System.out.println("id= " + idPatient);
         if(idPatient != null) {
-            // если пациент зарегистрирован, выводим врачей
+            int patID = Integer.parseInt(idPatient.toString());
+            // если пациент зарегистрирован, выводим его данные
+            getPatient(patID);
+            // выводим врачей
             showDoctors();
             
             try {
-                System.out.println("Выберите врача для записи на приём: ");
+                System.out.println("Выберите врача для записи на приём (для отмены введите 0): ");
                 int id = scanner.nextInt();
-                if(isExistDictor(id) == false) {
-                    System.out.println("Такого врача не существует. Сделайте правильный выбор!");
-                    
-                } else{
-                    scanner.nextLine();
-                    System.out.println("Выберите дату (yyyy-mm-dd): ");
-                    String date = scanner.nextLine();
-                    System.out.println("Выберите время (hh:mm): ");
-                    String time = scanner.nextLine();
-                    String fieldName = "idDoctor, idPatient, admission_date";
-                    String fieldValue = "?,?,?";
-                    Object[] param = {id, Integer.parseInt(idPatient.toString()), (date + " " + time)};
-                    Runquery rq = new Runquery("admission");
-                    if(rq.addEntity(fieldName, fieldValue, new Class[]{Integer.class, 
-                        Integer.class, String.class}, param)) {
-                        System.out.println("Запись на приём успешна!");
-                        // выводим информацию по истории
-                        showAdmission();
-                        showMainMenuItem();
+                if(id != 0) {
+                    // проверяем существование
+                    if(isExistDictor(id) == false) {
+                        System.out.println("Такого врача не существует. Сделайте правильный выбор!");
+
+                    } else {
+                        // выводим расписание выбранного врача с свободными датами
+                        // и получаем выбор пользователя
+                        int idSchedule = showFreeSchedule(id);
+                        if(idSchedule != 0) {
+                            // пользователь сделал свой выбор
+                            String fieldName = "idPatient, idSchedule";
+                            String fieldValue = "?,?";
+                            int[] param = {patID, idSchedule};
+                            Runquery rq = new Runquery("admission");
+                            if(rq.addEntity(fieldName, fieldValue, param)) {
+                                // устанавливаем флаг того, что данная дата занята
+                                Runquery runquery = new Runquery();
+                                String query = "update schedule set free = 1 where "
+                                        + "id=" + idSchedule + ";";
+                                if(runquery.updateFieldValue(query)) {
+                                    System.out.println("Запись на приём успешна!");
+                                    // выводим информацию по истории
+                                    showAdmission(patID);
+                                } else {
+                                    System.out.println("Что-то пошло не так! Ошибка");
+                                }
+
+                            } else {
+                                System.out.println("Что-то пошло не так! Ошибка");
+                            }
+
+                        }
                     }
                 }
             } catch (InputMismatchException ex) {
@@ -276,12 +294,15 @@ public class HospitalMenu {
         return null;
     }
     
-    private void showAdmission() {
-        String query = "select patients.name, patients.address, doctors.name, "
-                + "specialization.name, admission.admission_date from "
-                + "admission inner join patients on admission.idPatient = patients.id "
-                + "inner join doctors on doctors.id=admission.idDoctor "
-                + "inner join specialization on doctors.idSpecialization= specialization.id;";
+    private void showAdmission(int idPatient) {
+        String query = "select patients.name, patients.address, doctors.name," +
+        " specialization.name, schedule.admissiondate," +
+        " schedule.admissiontime from admission inner join" +
+        " patients on admission.idPatient = patients.id inner join schedule on" +
+        " schedule.id = admission.idSchedule inner join doctors on" +
+        " schedule.idDoctor = doctors.id inner join" +
+        " specialization on doctors.idSpecialization = specialization.id "
+                + "where admission.idPatient=" + idPatient + ";";
         outData(query);
     }
     
@@ -298,5 +319,48 @@ public class HospitalMenu {
             return false;
         }
         return Integer.parseInt(idDoctor.toString())== id;
+    }
+    
+    private void getPatient(int id) {
+        String query = "SELECT NAME FROM PATIENTS WHERE ID=" + id + ";";// строка-запрос на выборку
+        Runquery rq = new Runquery();
+        Object patientName = rq.getFieldValue(query, 1);
+        System.out.println("Запись на приём: пациент " + patientName.toString());
+    }
+    
+    /**
+     * Выводим свободные даты из расписания выбранного врача
+     * @param id идентификатор выбранного врача
+     * @return возвращает код выбранной записи
+     */
+    private int showFreeSchedule(int id) {
+        String query = "SELECT name FROM DOCTORS WHERE ID=" + id;
+        Runquery rq = new Runquery();
+        Object name = rq.getFieldValue(query, 1);
+        
+        System.out.println("Расписание доктора: " + name);
+        // запрос на выборку
+        query = "SELECT id as ИДЕНТИФИКАТОР, admissiondate AS 'ДАТА ПРИЁМА', "
+                + "admissiontime AS 'ВРЕМЯ ПРИЁМА' FROM schedule "
+                + "WHERE idDoctor = " + id +" and free = 0;";
+        outData(query);
+        if(!entities.isEmpty()) {
+            // если данные есть в наборе
+            System.out.println("Выберите время: ");
+            int idSchedule = scanner.nextInt();
+            // проверяем выбор пользователя
+            try{
+                
+                Object[] entity = entities.get(idSchedule - 1);// получаем выбранный элемент списка
+                System.out.println("entity: " + Arrays.toString(entity));
+                return Integer.parseInt(entity[1].toString());// возвращаем первый элемент в массиве - код
+
+            } catch (IndexOutOfBoundsException ex) {
+                System.out.println("Неверный выбор.");
+                return 0;
+            }
+        }
+        
+        return 0;
     }
 }
